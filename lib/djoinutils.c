@@ -11,8 +11,6 @@
 
 #include "djoinutils.h"
 
-#include "log.h"
-
 #define BUF_SIZE 16384
 
 struct djoin_info *djoin_read_domain_file(const char *filename)

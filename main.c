@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "lib/djoinutils.h"
-#include "lib/log.h"
 
 //Main program
 
