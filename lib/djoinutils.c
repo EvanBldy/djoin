@@ -1,4 +1,3 @@
-
 #include <stdint.h>
 #include <stdio.h>
 #include <openssl/bio.h>
@@ -8,8 +7,9 @@
 #include <endian.h>
 #include <string.h>
 #include <uuid/uuid.h>
+#include <unistd.h>
 
-#include "djoin.h"
+#include "djoinutils.h"
 
 #include "log.h"
 
@@ -31,23 +31,28 @@ struct djoin_info *djoin_read_domain_file(const char *filename)
 
 	iconv_t icon_handle;
 
+	if (access(filename,F_OK)==-1) {
+		printf("Could not find file %s\n", filename);
+		return NULL;
+	}
+
 	BIO *file = BIO_new_file(filename, "r");
 	if (!file)
 	{
-		verbose(LOG_AUTHN, L_ALERT, "Could not open file %s", filename);
+		printf("Could not open file %s\n", filename);
 		return NULL;
 	}
 	buf_len = BIO_read(file, wc_buf, wc_buf_size);
 	BIO_free_all(file);
 	if (buf_len <= 0)
 	{
-		verbose(LOG_AUTHN, L_ALERT, "Error reading / decoding base64 data in %s", filename);
+		printf("Error reading / decoding base64 data in %s\n", filename);
 		return NULL;
 	}
 	wc_buf_size = buf_len;
 	if ((icon_handle = iconv_open("UTF-8", "UTF-16LE")) < 0)
 	{
-		verbose(LOG_AUTHN, L_ALERT, "Error creating iconv conversion handle");
+		printf("Error creating iconv conversion handle\n");
 		return NULL;
 	}
 	iconv(icon_handle, &icon_in, &wc_buf_size, &icon_out, &base64_buf_size);
@@ -70,51 +75,52 @@ struct djoin_info *djoin_read_domain_file(const char *filename)
 	return domain_info;
 }
 
-void djoin_print_domain_info(struct djoin_info *info, int level)
+void djoin_print_domain_info(struct djoin_info *info)
 {
 	char guid_str[40];
 	char sid_str[64];
 
-	verbose(LOG_AUTHN, level, "Domain Info Version: %d (0x%lx)", info->file_header.version & 0x00000000000000FFL, info->file_header.version);
-	verbose(LOG_AUTHN, level, "Size: %d bytes", info->file_header.payload_len);
-	verbose(LOG_AUTHN, level, "");
+	printf("\tDomain Info Version: %lx (0x%lx)\n", info->file_header.version & 0x00000000000000FFL, info->file_header.version);
+	printf("\tSize: %lx bytes\n", info->file_header.payload_len);
 
-	verbose(LOG_AUTHN, level, "Machine Information:");
-	verbose(LOG_AUTHN, level, "	Domain: %s", info->domain_name);
-	verbose(LOG_AUTHN, level, "	Computer Name: %s", info->machine_name);
-	verbose(LOG_AUTHN, level, "	Computer Password: %s", info->machine_password);
+	printf("\n");
 
-	verbose(LOG_AUTHN, level, "");
+	printf("\tMachine Information:\n");
+	printf("\t\tDomain: %s\n", info->domain_name);
+	printf("\t\tComputer Name: %s\n", info->machine_name);
+	printf("\t\tComputer Password: %s\n", info->machine_password);
+
+	printf("\n");
 
 	uuid_unparse(info->policy.guid, guid_str);
 
 	djoin_unparse_sid(&info->policy.sid, sid_str);
 
-	verbose(LOG_AUTHN, level, "Domain Policy Information:");
-	verbose(LOG_AUTHN, level, "	Domain Name: %s", info->policy.netbios_domain_name);
-	verbose(LOG_AUTHN, level, "	DNS Name: %s", info->policy.dns_domain_name);
-	verbose(LOG_AUTHN, level, "	Forest Name: %s", info->policy.dns_forest_name);
-	verbose(LOG_AUTHN, level, "	Domain GUID: %s", guid_str);
-	verbose(LOG_AUTHN, level, "	SID: %s", sid_str);
+	printf("\tDomain Policy Information:\n");
+	printf("\t\tDomain Name: %s\n", info->policy.netbios_domain_name);
+	printf("\t\tDNS Name: %s\n", info->policy.dns_domain_name);
+	printf("\t\tForest Name: %s\n", info->policy.dns_forest_name);
+	printf("\t\tDomain GUID: %s\n", guid_str);
+	printf("\t\tSID: %s\n", sid_str);
 
-	verbose(LOG_AUTHN, level, "");
+	printf("\n");
 
 	uuid_unparse(info->controller.guid, guid_str);
 
-	verbose(LOG_AUTHN, level, "Domain Controller Information:");
-	verbose(LOG_AUTHN, level, "	Domain Controller Name: %s", info->controller.domain_controller_name);
-	verbose(LOG_AUTHN, level, "	Domain Controller Address: %s", info->controller.domain_controller_address);
-	verbose(LOG_AUTHN, level, "	Domain Controller Address Type: 0x%x", info->controller.domain_controller_address_type);
-	verbose(LOG_AUTHN, level, "	Domain GUID: %s", guid_str);
-	verbose(LOG_AUTHN, level, "	Domain DNS Name: %s", info->controller.dns_domain_name);
-	verbose(LOG_AUTHN, level, "	Domain Forest Name: %s", info->controller.dns_forest_name);
-	verbose(LOG_AUTHN, level, "	Flags: 0x%x", info->controller.flags);
-	verbose(LOG_AUTHN, level, "	Domain Site Name: %s", info->controller.dc_site_name);
-	verbose(LOG_AUTHN, level, "	Computer Site Name: %s", info->controller.client_site_name);
+	printf("\tDomain Controller Information:\n");
+	printf("\t\tDomain Controller Name: %s\n", info->controller.domain_controller_name);
+	printf("\t\tDomain Controller Address: %s\n", info->controller.domain_controller_address);
+	printf("\t\tDomain Controller Address Type: 0x%x\n", info->controller.domain_controller_address_type);
+	printf("\t\tDomain GUID: %s\n", guid_str);
+	printf("\t\tDomain DNS Name: %s\n", info->controller.dns_domain_name);
+	printf("\t\tDomain Forest Name: %s\n", info->controller.dns_forest_name);
+	printf("\t\tFlags: 0x%x\n", info->controller.flags);
+	printf("\t\tDomain Site Name: %s\n", info->controller.dc_site_name);
+	printf("\t\tComputer Site Name: %s\n", info->controller.client_site_name);
 
-	verbose(LOG_AUTHN, level, "");
+	printf("\n");
 
-	verbose(LOG_AUTHN, level, "Options: 0x%x", info->options);
+	printf("\tOptions: 0x%x\n", info->options);
 }
 
 void djoin_unparse_sid(struct djoin_sid *sid, char *str)
@@ -227,7 +233,7 @@ struct djoin_info * djoin_get_domain_info(const char *buf, int buf_len)
 
 	if (domain_info->policy.sid.size > MAX_SID_ELEMENTS)
 	{
-		verbose(LOG_AUTHN, L_ALERT, "Error decoding data - too many SID elements (%d - max is %d)", domain_info->policy.sid.size, MAX_SID_ELEMENTS);
+		printf("Error decoding data - too many SID elements (%d - max is %d)\n", domain_info->policy.sid.size, MAX_SID_ELEMENTS);
 		goto invalid;
 	}
 
@@ -304,7 +310,7 @@ struct djoin_info * djoin_get_domain_info(const char *buf, int buf_len)
 
 	invalid:
 
-	verbose(LOG_AUTHN, L_ALERT, "Invalid Offline Domain Join Data");
+	printf("Invalid Offline Domain Join Data\n");
 	djoin_free_info(domain_info);
 	return NULL;
 }
@@ -318,7 +324,7 @@ char * djoin_convert_string(struct djoin_str *str, const char *buf, int buf_len)
 
 	if ((&str->buffer) - 1 > buf + buf_len || &str->buffer + str->buf_len > buf + buf_len)
 	{
-		verbose(LOG_AUTHN, L_ALERT, "Corrupt djoin string buffer");
+		printf("Corrupt djoin string buffer\n");
 		return NULL;	
 	}
 
@@ -331,7 +337,7 @@ char * djoin_convert_string(struct djoin_str *str, const char *buf, int buf_len)
 
 	if ((icon_handle = iconv_open("UTF-8", "UTF-16LE")) < 0)
 	{
-		verbose(LOG_AUTHN, L_ALERT, "Error creating iconv conversion handle");
+		printf("Error creating iconv conversion handle\n");
 		return NULL;
 	}
 	ret = (char *)malloc(le32toh(str->buf_len + 1));

@@ -3,6 +3,7 @@
 #define _AUTHENT_DJOIN_H
 
 #include <uuid/uuid.h>
+#include <stdint.h>
 
 /* Decode the file format produced by off-line domain join files (produced by djoin.exe)
  */
@@ -134,7 +135,7 @@ struct djoin_info *djoin_read_domain_file(const char *file);
 struct djoin_info *djoin_get_domain_info(const char *buf, int buf_len);
 
 // Print out the domain information
-void djoin_print_domain_info(struct djoin_info *info, int level);
+void djoin_print_domain_info(struct djoin_info *info);
 
 // Get the string represented by the string buffer, making sure it does not go out
 // of bounds of the underlying buffer
@@ -154,4 +155,3 @@ void djoin_free_info(struct djoin_info *i);
 #endif
 
 #endif /* _AUTHENT_DJOIN_H */
-
